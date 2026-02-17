@@ -1,26 +1,29 @@
 # go-wrr — Smooth Weighted Round-Robin
 
-A generic, deterministic, smooth weighted round-robin scheduler for Go.
+This package implements a smooth, weighted round-robin scheduler.
 
-Based on the nginx smooth weighted round-robin algorithm. Compiles the
-weight distribution into a fixed lookup table at construction time,
-making `Next()` an O(1) operation with zero allocation.
+It provides a high-performance, concurrency-safe scheduler that distributes
+items according to their integer weights. Unlike naive weighted round-robin
+(which can generate "bursts" of the same item), this package implements the
+"smooth" algorithm used by Nginx. This ensures that items are interleaved
+evenly over time while strictly adhering to the configured weight ratios.
 
-## Properties
+## Key Features
 
-**Proportional.** Over every `totalWeight` consecutive calls,
-each item is returned exactly `Weight()` times.
+- Smooth Distribution: Spreads high-weight items evenly across the sequence
+  (e.g., "A A B" becomes "A B A").
+- O(1) Runtime: The selection logic involves a single atomic increment and
+  array lookup, making it suitable for high-throughput hot paths.
+- Deterministic: The sequence is precompiled and cycles deterministically.
+- Concurrency Safe: Safe for concurrent access by multiple goroutines without
+  mutex locking during selection.
 
-**Smooth.** Items are interleaved, not batched. An item with
-weight W out of total T will never appear more than
-`ceil(2W/T)` times consecutively.
+## Algorithm Details
 
-**Deterministic.** Two schedulers built from identical inputs
-produce identical sequences.
-
-**O(1) dispatch.** Construction is O(N × totalWeight) where N
-is the number of items. `Next()` is a single array index plus
-modulo.
+The scheduler precompiles a lookup table based on the greatest common divisor
+(GCD) of the input weights. This optimization significantly reduces memory usage
+for proportionate weights (e.g., weights {100, 200} result in a table of size 3,
+not 300).
 
 
 ## Install
@@ -60,5 +63,4 @@ for {
     // dispatch from q.Ch
 }
 ```
-
 

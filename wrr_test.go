@@ -299,7 +299,7 @@ func TestLargeWeightDisparitySmoothness(t *testing.T) {
 // Cycle alignment: exact proportions per full cycle
 // -----------------------------------------------------------
 
-func TestExactProportionsPerCycle(t *testing.T) {
+func TestExactProportionsPerCycleSimple(t *testing.T) {
 	assert := newAsserter(t)
 	w := mustNew([]wItem{
 		wi("A", 5),
@@ -310,6 +310,45 @@ func TestExactProportionsPerCycle(t *testing.T) {
 	totalWeight := 10
 	for cycle := 0; cycle < 100; cycle++ {
 		m := tally(w, totalWeight)
+		assert(m["A"] == 5,
+			"cycle %d: A expected 5, got %d", cycle, m["A"])
+		assert(m["B"] == 3,
+			"cycle %d: B expected 3, got %d", cycle, m["B"])
+		assert(m["C"] == 2,
+			"cycle %d: C expected 2, got %d", cycle, m["C"])
+	}
+}
+
+// -----------------------------------------------------------
+// Cycle alignment: exact proportions per full cycle
+// -----------------------------------------------------------
+
+func TestExactProportionsPerCycleNormalized(t *testing.T) {
+	assert := newAsserter(t)
+	// We use large weights that share a common factor (10).
+	// Raw Sum = 100. GCD = 10. Normalized Sum = 10.
+	slots := []wItem{
+		wi("A", 50),
+		wi("B", 30),
+		wi("C", 20),
+	}
+
+	w := mustNew(slots)
+
+	// 1. Verify Optimization:
+	// The internal sequence should be reduced by the GCD (10).
+	// If optimization failed, len would be 100.
+	if len(w.seq) != 10 {
+		t.Fatalf("GCD optimization failed. Expected seq len 10, got %d", len(w.seq))
+	}
+
+	// 2. Verify Distribution:
+	// The cycle should complete in 'totalWeight' (normalized) steps, not raw steps.
+	totalWeight := 10
+	for cycle := 0; cycle < 100; cycle++ {
+		m := tally(w, totalWeight)
+
+		// We expect the counts to match the Normalized weights (5, 3, 2)
 		assert(m["A"] == 5,
 			"cycle %d: A expected 5, got %d", cycle, m["A"])
 		assert(m["B"] == 3,
